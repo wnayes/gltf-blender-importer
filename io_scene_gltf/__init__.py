@@ -6,6 +6,7 @@ from mathutils import Vector
 from bpy.props import StringProperty
 from bpy_extras.io_utils import ImportHelper
 from bpy_extras.image_utils import load_image
+from base64 import b64decode
 
 bl_info = {
     "name": "glTF 2.0 Importer",
@@ -37,7 +38,7 @@ class ImportGLTF(bpy.types.Operator, ImportHelper):
         if buffer_location in self.buffers:
             return self.buffers[buffer_location]
 
-        print("Loading buffer", buffer_location)
+        #print("Loading buffer", buffer_location)
         fp = open(buffer_location, "rb")
         bytes_read = fp.read()
         fp.close()
@@ -95,7 +96,7 @@ class ImportGLTF(bpy.types.Operator, ImportHelper):
 
     def create_material(self, idx):
         material = self.root['materials'][idx]
-        material_name = material['name']
+        material_name = material.get('name', 'material')
 
         if material_name in self.materials:
             return self.materials[material_name]
@@ -210,21 +211,23 @@ class ImportGLTF(bpy.types.Operator, ImportHelper):
 
     def create_mesh(self, node, mesh):
 
-        me = bpy.data.meshes.new(mesh['name'])
-        ob = bpy.data.objects.new(node['name'], me)
+        me = bpy.data.meshes.new(mesh.get('name', 'mesh'))
+        ob = bpy.data.objects.new(node.get('name', 'node'), me)
 
         self.create_translation(ob, node)
 
         primitives = mesh['primitives'][0]
-        material = self.create_material(primitives['material'])
-        me.materials.append(material)
-        indices = self.get_accessor(primitives['indices'])
-        faces = [tuple(indices[i:i+3]) for i in range(0, len(indices), 3)]
-
-        attributes = primitives['attributes']
-        positions = self.get_accessor(attributes['POSITION'])
-
-        me.from_pydata(positions, [], faces)
+        if 'material' in primitives:
+            material = self.create_material(primitives['material'])
+            me.materials.append(material)
+        if 'indices' in primitives:
+            indices = self.get_accessor(primitives['indices'])
+            faces = [tuple(indices[i:i+3]) for i in range(0, len(indices), 3)]
+        if 'attributes' in primitives:
+            attributes = primitives['attributes']
+            positions = self.get_accessor(attributes['POSITION'])
+        if 'attributes' in primitives and 'indices' in primitives:
+            me.from_pydata(positions, [], faces)
 
         for polygon in me.polygons:
             polygon.use_smooth = True
@@ -248,7 +251,7 @@ class ImportGLTF(bpy.types.Operator, ImportHelper):
         if 'mesh' in node:
             ob = self.create_mesh(node, self.root['meshes'][node['mesh']])
         else:
-            ob = bpy.data.objects.new(node['name'], None)
+            ob = bpy.data.objects.new(node.get('name', 'node'), None)
             self.create_translation(ob, node)
 
         ob.parent = parent
