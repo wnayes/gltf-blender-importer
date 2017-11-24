@@ -116,7 +116,7 @@ class ImportGLTF(bpy.types.Operator, ImportHelper):
         is_glb = contents[:4] == b"glTF"
 
         if not is_glb:
-            self.gltf = json.loads(contents)
+            self.gltf = json.loads(contents.decode("ascii"))
             self.glb_buffer = None
         else:
             print("Detected GLB file")
