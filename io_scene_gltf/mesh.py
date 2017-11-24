@@ -94,7 +94,8 @@ def primitive_to_mesh(op, primitive, all_attributes, material_index):
         layer = bme.verts.layers.deform.new('JOINTS_0')
         for vert, joint_vec, weight_vec in zip(bme.verts, joints, weights):
             for joint, weight in zip(joint_vec, weight_vec):
-                vert[layer][joint] = weight
+                print (layer, joint, weight)
+                vert[layer][int(joint)] = weight
         bme.to_mesh(me)
         bme.free()
 
